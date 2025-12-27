@@ -2,62 +2,64 @@ import streamlit as st
 import sympy as sp
 import pandas as pd
 
-# Konfigurasi halaman
-st.set_page_config(
-    page_title="SPNL - Metode Bisection",
-    layout="centered"
-)
+st.title("Aplikasi Solusi SPNL - Metode Bisection")
 
-st.title("🔢 Aplikasi Web SPNL")
-st.subheader("Metode Bisection")
-st.write("Mencari akar persamaan non-linear menggunakan **Metode Bisection**")
+# simbol
+x = sp.symbols('x')
 
-# ================= INPUT =================
+# input fungsi
 fungsi_input = st.text_input(
     "Masukkan fungsi f(x):",
     value="x**3 - x - 2"
 )
 
-a = st.number_input("Nilai batas bawah (a)", value=1.0)
-b = st.number_input("Nilai batas atas (b)", value=2.0)
-toleransi = st.number_input(
-    "Toleransi Error",
-    value=0.0001,
-    format="%.6f"
-)
-maks_iterasi = st.number_input(
-    "Maksimum Iterasi",
-    value=50,
-    step=1
-)
+# input batas
+a = st.number_input("Batas bawah (a)", value=1.0)
+b = st.number_input("Batas atas (b)", value=2.0)
 
-# ================= PROSES =================
-if st.button("🔍 Hitung Akar"):
-    x = sp.symbols('x')
+# toleransi
+tol = st.number_input("Toleransi error", value=0.0001, format="%.6f")
 
+# tombol
+if st.button("Hitung"):
     try:
-        # Konversi fungsi input ke fungsi Python
-        fungsi = sp.sympify(fungsi_input)
-        f = sp.lambdify(x, fungsi, "math")
+        # ubah fungsi teks ke fungsi matematika
+        f = sp.lambdify(x, sp.sympify(fungsi_input), 'math')
 
-        fa = f(a)
-        fb = f(b)
-
-        # Validasi syarat bisection
-        if fa * fb >= 0:
-            st.error("❌ Syarat tidak terpenuhi: f(a) × f(b) harus < 0")
+        # cek syarat bisection
+        if f(a) * f(b) >= 0:
+            st.error("Syarat bisection tidak terpenuhi (f(a) dan f(b) harus beda tanda)")
         else:
-            data = []
+            data_iterasi = []
             iterasi = 1
-            error = abs(b - a)
-            c = 0
 
-            while error > toleransi and iterasi <= maks_iterasi:
+            while abs(b - a) > tol:
                 c = (a + b) / 2
                 fc = f(c)
 
-                data.append([
-                    iterasi,
-                    round(a, 6),
-                    round(b, 6),
-                    round
+                data_iterasi.append([iterasi, a, b, c, fc])
+
+                if f(a) * fc < 0:
+                    b = c
+                else:
+                    a = c
+
+                iterasi += 1
+
+            # hasil akhir
+            st.success("Perhitungan selesai")
+            st.write(f"**Akar hampiran ≈ {c:.5f}**")
+            st.write(f"**Jumlah iterasi: {iterasi-1}**")
+
+            # tampilkan tabel iterasi
+            df = pd.DataFrame(
+                data_iterasi,
+                columns=["Iterasi", "a", "b", "c", "f(c)"]
+            )
+
+            st.subheader("Tabel Iterasi")
+            st.dataframe(df)
+
+    except:
+        st.error("Fungsi tidak valid. Contoh penulisan: x**2 - 4")
+
